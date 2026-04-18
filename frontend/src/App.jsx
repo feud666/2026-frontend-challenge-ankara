@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchAllRecords, getSuspects, getPeople, parseTs } from './api';
 import './App.css';
-import MapView from './MapView';
+import MapView from './MapView.jsx';
 
 // ─── Constants ──────────────────────────────────────────────────────────
 const TYPE_LABELS = {
@@ -311,12 +311,23 @@ export default function App() {
           </section>
         </aside>
 
-        {/* ── Center timeline ──────────────────────────────────────── */}
+{/* ── Center timeline ──────────────────────────────────────── */}
         <main className="panel timeline-panel">
           <div className="tl-panel-head">
             <h2>Timeline {filterPerson && <span className="subtle">· {filterPerson}</span>}</h2>
             <span className="count">{filtered.length} records</span>
           </div>
+
+          {/* ADD THE MAP HERE */}
+          <MapView 
+            records={filtered} 
+            selectedRecord={selectedRecord} 
+            onSelectRecord={(r) => {
+              setSelectedRecord(r);
+              setSelectedSuspect(null); // Clears the suspect panel so the record details show up
+            }} 
+          />
+
           {filtered.length === 0 ? (
             <p className="empty-state">No records match the current filters</p>
           ) : (
