@@ -156,10 +156,40 @@ Runs ESLint to check code quality and style.
 ## 🗺️ Features
 
 - **Record Tracking**: View and filter records by type (Check-in, Message, Sighting, Note, Tip)
-- **Suspect Analysis**: Ranked suspect list with score calculations
-- **Interactive Map**: Leaflet-based map showing record locations with custom markers
+- **Suspect Analysis**: Ranked suspect list with score calculations and known associates detection
+- **Known Associates**: Automatically identifies and displays people connected to each suspect based on evidence
+- **Interactive Map**: Leaflet-based map showing record locations with custom markers, dark mode support
+- **Dark Mode**: Toggle between light and dark themes with persistent preference (saved to localStorage)
 - **Timeline View**: Chronological display of events and activities
 - **Search & Filter**: Filter records by various criteria
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
+
+---
+
+## 💡 How to Use
+
+### Viewing Records & Timeline
+1. Use the **Search & Filter** panel on the left to find specific records
+2. Filter by type (Check-in, Message, Sighting, etc.) or search by location/people
+3. Click on any record in the timeline to view details on the right panel
+
+### Analyzing Suspects
+1. Click on any suspect in the **Suspicion Ranking** panel (left sidebar)
+2. View their stats: Score, Tips, Sightings, Messages
+3. See their **Known Associates** - automatically detected people they were seen with
+4. Review their **Evidence Trail** showing all connected records
+
+### Using the Map
+1. Records are plotted on the interactive map with color-coded markers
+2. Use the **+/- zoom buttons** (top-left) to zoom in/out
+3. Drag to pan around the map
+4. Click any marker to view record details
+5. Map automatically switches to dark variant in dark mode
+
+### Dark Mode
+1. Click the **🌙 Dark** or **☀️ Light** button in the top-right header
+2. Your preference is automatically saved for next time
+3. All UI elements and map adapt to the selected theme
 
 ---
 
