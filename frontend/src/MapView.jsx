@@ -10,10 +10,10 @@ const TYPE_COLORS = {
 };
 
 // Custom HTML markers to match your app's design
-const createCustomIcon = (type, isSelected) => {
+const createCustomIcon = (type, isSelected, darkMode) => {
   const color = TYPE_COLORS[type] || '#888';
   const size = isSelected ? 20 : 14;
-  const border = isSelected ? '3px solid #2D3B55' : '2px solid white';
+  const border = isSelected ? `3px solid ${darkMode ? '#f0f0f0' : '#2D3B55'}` : `2px solid ${darkMode ? '#2d2d2d' : 'white'}`;
 
   return divIcon({
     className: 'custom-map-marker',
@@ -45,7 +45,7 @@ function MapController({ selectedRecord }) {
   return null;
 }
 
-export default function MapView({ records, selectedRecord, onSelectRecord }) {
+export default function MapView({ records, selectedRecord, darkMode = false, onSelectRecord }) {
   // 1. Filter to only records that have valid coordinates
   const mapableRecords = records.filter(r => r?.coordinates?.lat && r?.coordinates?.lng);
 
@@ -59,6 +59,11 @@ export default function MapView({ records, selectedRecord, onSelectRecord }) {
 
   if (mapableRecords.length === 0) return null;
 
+  // Select tile layer based on dark mode
+  const tileUrl = darkMode
+    ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels_under/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
   return (
     <div style={{
       height: '320px',
@@ -68,12 +73,22 @@ export default function MapView({ records, selectedRecord, onSelectRecord }) {
       marginBottom: '20px',
       border: '1px solid var(--border)',
       position: 'relative',
-      zIndex: 0 // Prevents the map from overlapping sticky elements
+      zIndex: 0
     }}>
-      <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }}>
-        {/* CartoDB Voyager tiles - very clean and light, fits your UI perfectly */}
+      <MapContainer 
+        center={center} 
+        zoom={13} 
+        style={{ height: '100%', width: '100%' }}
+        scrollWheelZoom={false}
+      >
+        {/* CartoDB Voyager tiles - switches to dark variant in dark mode */}
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          key={darkMode ? "dark-tiles" : "light-tiles"}
+          url={
+            darkMode 
+              ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          }
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         
@@ -94,7 +109,7 @@ export default function MapView({ records, selectedRecord, onSelectRecord }) {
             <Marker
               key={record.id}
               position={[record.coordinates.lat, record.coordinates.lng]}
-              icon={createCustomIcon(record.type, isSelected)}
+              icon={createCustomIcon(record.type, isSelected, darkMode)}
               eventHandlers={{
                 click: () => onSelectRecord(record),
               }}
@@ -105,7 +120,7 @@ export default function MapView({ records, selectedRecord, onSelectRecord }) {
                     {record.type}
                   </strong>
                   <br />
-                  <span style={{ fontWeight: '700', color: '#2D3B55' }}>{record.location || "Unknown Location"}</span>
+                  <span style={{ fontWeight: '700', color: darkMode ? '#f0f0f0' : '#2D3B55' }}>{record.location || "Unknown Location"}</span>
                 </div>
               </Popup>
             </Marker>

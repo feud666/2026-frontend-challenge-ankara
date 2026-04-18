@@ -26,7 +26,7 @@ for f in forms:
         print(f"   [{qid}] {q.get('text', '?')}  type={q.get('type')}")
     
     # Get a few submissions to see real data
-    subs = client.get_form_submissions(form_id, limit=2)
+    subs = client.get_form_submissions(form_id, limit=1000)
     print(f" Sample submissions ({len(subs)} shown):")
     for s in subs:
         print(f"   submission_id={s['id']}  created={s['created_at']}")

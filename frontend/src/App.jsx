@@ -64,6 +64,7 @@ function SuspectCard({ suspect, rank, isTop, selected, onClick }) {
 function TimelineItem({ record, selected, onClick }) {
   return (
     <button
+      id={`record-${record.id}`}
       className={`tl-item ${selected ? 'selected' : ''}`}
       onClick={onClick}
     >
@@ -94,7 +95,34 @@ function TimelineItem({ record, selected, onClick }) {
   );
 }
 
-function DetailPanel({ record, suspect, onClose }) {
+function DetailPanel({ record, suspect, records, onClose }) {
+  const knownAssociates = useMemo(() => {
+    if (!suspect || !records) return [];
+
+    const counts = {};
+    const suspectEvidenceIds = suspect.evidence.map(e => e.recordId);
+
+    records.forEach(r => {
+      if (suspectEvidenceIds.includes(r.id)) {
+        r.people.forEach(p => {
+          const nameLower = p.toLowerCase();
+          const isTarget = nameLower === 'podo';
+          const isSuspect = nameLower === suspect.name.toLowerCase() || 
+                            suspect.aliases.some(a => a.toLowerCase() === nameLower);
+          
+          // If it's not Podo and not the suspect themselves, count them!
+          if (!isTarget && !isSuspect) {
+            counts[p] = (counts[p] || 0) + 1;
+          }
+        });
+      }
+    });
+
+    // Sort by who they are seen with the most
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [suspect, records]);
   if (!record && !suspect) {
     return (
       <div className="detail empty-detail">
@@ -120,6 +148,18 @@ function DetailPanel({ record, suspect, onClose }) {
           <div className="detail-section">
             <h4>Also known as</h4>
             <div className="aliases-list">{suspect.aliases.join(' · ')}</div>
+          </div>
+        )}
+        {knownAssociates.length > 0 && (
+          <div className="detail-section">
+            <h4>Known Associates</h4>
+            <div className="people-chips">
+              {knownAssociates.map(a => (
+                <span key={a.name} className="chip">
+                  {a.name} <span style={{ opacity: 0.6, marginLeft: '4px' }}>×{a.count}</span>
+                </span>
+              ))}
+            </div>
           </div>
         )}
         <div className="detail-section">
@@ -191,7 +231,27 @@ export default function App() {
   const [filterPerson, setFilterPerson] = useState(TARGET);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
 
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
+
+  useEffect(() => {
+    if (selectedRecord) {
+      const element = document.getElementById(`record-${selectedRecord.id}`);
+      if (element) {
+        element.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center'
+        });
+      }
+    }
+  }, [selectedRecord]);
   useEffect(() => {
     Promise.all([fetchAllRecords(), getSuspects(), getPeople()])
       .then(([r, s, p]) => { setRecords(r); setSuspects(s); setPeople(p); })
@@ -219,6 +279,19 @@ export default function App() {
     }
     return r;
   }, [records, filterPerson, typeFilter, search]);
+
+  // Last known location of Podo
+  const lastKnown = useMemo(() => {
+    if (!records) return null;
+    const podoRecs = records.filter(r => r.people.some(p => p.toLowerCase() === 'podo'));
+    if (podoRecs.length === 0) return null;
+    const last = podoRecs[podoRecs.length - 1];
+    const others = last.people.filter(p => p.toLowerCase() !== 'podo');
+    return { 
+      record: last, 
+      with: others.length > 0 ? others.join(', ') : 'Alone' 
+    };
+  }, [records]);
 
   // Loading state
   if (error) {
@@ -254,9 +327,38 @@ export default function App() {
         <div className="stat-pills">
           <span className="stat-pill accent">{records.length} records</span>
           <span className="stat-pill">{people.length} people</span>
+          <button 
+            className="dark-mode-toggle"
+            onClick={() => setDarkMode(!darkMode)}
+            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label="Toggle dark mode"
+          >
+            {darkMode ? '☀️ Light' : '🌙 Dark'}
+          </button>
         </div>
       </header>
-
+      {lastKnown && (
+              <div className="alert-banner">
+                <div className="alert-icon">🚨</div>
+                <div className="alert-content">
+                  <h3>Last Known Status</h3>
+                  <p>
+                    Podo was last recorded on <span className="alert-highlight">{formatTime(lastKnown.record.timestamp)}</span> at <span className="alert-highlight">{lastKnown.record.location}</span>. 
+                    {lastKnown.with !== 'Alone' && <> Seen with: <span className="alert-highlight">{lastKnown.with}</span>.</>}
+                  </p>
+                </div>
+                <button 
+                  className="chip chip-target alert-btn" 
+                  onClick={() => {
+                    setSelectedRecord(lastKnown.record);
+                    setSelectedSuspect(null);
+                    // Optional: if you add scrolling later, you can trigger it here!
+                  }}
+                >
+                  View Evidence
+                </button>
+              </div>
+            )}
       <div className="grid">
         {/* ── Left sidebar ─────────────────────────────────────────── */}
         <aside className="sidebar">
@@ -321,10 +423,11 @@ export default function App() {
           {/* ADD THE MAP HERE */}
           <MapView 
             records={filtered} 
-            selectedRecord={selectedRecord} 
+            selectedRecord={selectedRecord}
+            darkMode={darkMode}
             onSelectRecord={(r) => {
               setSelectedRecord(r);
-              setSelectedSuspect(null); // Clears the suspect panel so the record details show up
+              setSelectedSuspect(null);
             }} 
           />
 
@@ -350,6 +453,7 @@ export default function App() {
         {/* ── Right detail ─────────────────────────────────────────── */}
         <aside className="detail-wrap">
           <DetailPanel
+            records={records}
             record={selectedRecord}
             suspect={selectedSuspect}
             onClose={() => { setSelectedRecord(null); setSelectedSuspect(null); }}
